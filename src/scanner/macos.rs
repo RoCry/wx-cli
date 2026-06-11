@@ -109,8 +109,25 @@ pub fn scan_keys(db_dir: &Path) -> Result<Vec<KeyEntry>> {
         let mut task: mach_port_t = 0;
         let kr = task_for_pid(mach_task_self(), pid, &mut task);
         if kr != KERN_SUCCESS {
+            // task_for_pid 读取目标进程内存始终需要 root。
+            // 最常见的 kr=5 (KERN_FAILURE) 就是没加 sudo，先指出这一点；
+            // 只有已经是 root 仍然失败，才是 SIP 开启下的签名问题，需要重签。
+            if libc::geteuid() != 0 {
+                bail!(
+                    "task_for_pid 失败 (kr={})：抓取密钥需要 root 权限。\n\
+                    \n\
+                    请改用 sudo 重新运行：\n\
+                         sudo wx init\n\
+                    \n\
+                    （若已用 sudo 仍失败，说明 SIP 开启且 WeChat 未 ad-hoc 签名，\n\
+                     此时才需要 codesign 重签，详见 README。）",
+                    kr
+                );
+            }
             bail!(
-                "task_for_pid 失败 (kr={})。请按以下步骤修复：\n\
+                "task_for_pid 失败 (kr={})：已是 root 但仍无法获取 task port，\n\
+                通常是 SIP 开启且 WeChat 为官方签名（hardened runtime）所致。\n\
+                请按以下步骤修复：\n\
                 \n\
                   1. 对 WeChat 重新签名（只需做一次）：\n\
                      codesign --force --deep --sign - /Applications/WeChat.app\n\
@@ -118,12 +135,14 @@ pub fn scan_keys(db_dir: &Path) -> Result<Vec<KeyEntry>> {
                   2. 重启 WeChat：\n\
                      killall WeChat && open /Applications/WeChat.app\n\
                 \n\
-                  3. 再次运行（需要 root）：\n\
+                  3. 再次运行：\n\
                      sudo wx init\n\
                 \n\
                 如果 codesign 报 \"signature in use\"，先执行：\n\
                      codesign --remove-signature /Applications/WeChat.app/Contents/Frameworks/vlc_plugins/librtp_mpeg4_plugin.dylib\n\
-                     codesign --force --deep --sign - /Applications/WeChat.app",
+                     codesign --force --deep --sign - /Applications/WeChat.app\n\
+                \n\
+                （若已关闭 SIP，则无需重签，只要确保用 sudo 运行即可。）",
                 kr
             );
         }
