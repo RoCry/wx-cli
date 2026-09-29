@@ -143,6 +143,12 @@ wx sessions
 
 能看到最近会话即表示一切正常。daemon 在首次调用时自动启动。
 
+`wx sessions --json` 每条会话包含 `attention`：`pinned`、`muted`、`folded`、
+`archived` 和原始 `notification_level`。每次查询刷新联系人数据库。已在 macOS
+微信 4.1.13 核对置顶、群免打扰、折叠群；私聊免打扰与归档暂为 `null`，
+缺失联系人保持未知。会话仍按最近消息排序，筛选策略由调用方决定。
+更新二进制后运行 `wx daemon stop`，下次命令会启动新版后台服务。
+
 ---
 
 ## 命令

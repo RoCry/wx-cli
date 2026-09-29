@@ -1,5 +1,6 @@
 pub mod cache;
 pub mod meta;
+pub mod preferences;
 pub mod query;
 pub mod server;
 

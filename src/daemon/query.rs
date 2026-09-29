@@ -9,6 +9,7 @@ use std::sync::{Arc, OnceLock};
 
 use super::cache::{CacheMode, DbCache};
 use super::meta::{derive_status, discover_unknown_shards, Meta};
+use super::preferences::{for_session, load_attention};
 
 /// 静态编译的 Msg 表名正则，避免在热路径中重复编译
 fn msg_table_re() -> &'static Regex {
@@ -284,6 +285,7 @@ pub async fn q_sessions(
     with_meta: bool,
     debug_source: bool,
 ) -> Result<Value> {
+    let attention = load_attention(db).await?;
     let path = db
         .get("session/session.db")
         .await?
@@ -348,6 +350,7 @@ pub async fn q_sessions(
             "username": username,
             "is_group": is_group,
             "chat_type": chat_type,
+            "attention": for_session(&username, &attention),
             "unread": unread,
             "last_msg_type": fmt_type(msg_type),
             "last_sender": sender_display,
